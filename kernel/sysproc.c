@@ -89,3 +89,13 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// trace a command's sytem calls.
+uint64
+sys_trace(void)
+{
+  uint64 mask;
+  argaddr(0, &mask);
+  trace(mask);
+  return 0;
+}
