@@ -172,3 +172,25 @@ qemu-gdb: $K/kernel .gdbinit fs.img
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
+# defining macro for scheduler
+# make qemu SCHEDULER=FCFS
+
+SCHED = -D RR
+
+ifeq ($SCHEDULER, RR)
+	SCHED = -D RR
+endif
+ifeq ($SCHEDULER, FCFS)
+	SCHED = -D FCFS
+endif
+ifeq ($SCHEDULER, LBS)
+	SCHED = -D LBS
+endif
+ifeq ($SCHEDULER, PBS)
+	SCHED = -D PBS
+endif
+ifeq ($SCHEDULER, MLFQ)
+	SCHED = -D MLFQ
+endif
+
+CFLAGS += $(SCHED)

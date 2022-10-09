@@ -106,4 +106,6 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   int trace_mask;
+
+  uint64 ctime;                 // process creation time
 };

@@ -125,6 +125,7 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->trace_mask = 0;
+  p->ctime = ticks;       // initialise creation time with the `ticks` global variable
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -450,12 +451,13 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  
+
   c->proc = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
+#ifdef RR
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
@@ -472,6 +474,35 @@ scheduler(void)
       }
       release(&p->lock);
     }
+#endif
+
+#ifdef FCFS
+    struct proc *oldest_proc = proc;
+    // iterate through all the processes to find the 
+    // runnable process (if any) with the lowest creation time
+    for(p = proc; p < &proc[NPROC]; p++)
+    {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE && p->ctime < oldest_proc->ctime)
+      {
+        oldest_proc = p;
+      }
+      release(&p->lock);
+    }
+    // check if oldest process is runnable
+    // if so, then context switch to it
+    acquire(&(oldest_proc->lock));
+    if(oldest_proc->state == RUNNABLE)
+    {
+      oldest_proc->state = RUNNING;
+      c->proc = oldest_proc;
+      swtch(&c->context, &oldest_proc->context);
+
+      c->proc = 0;
+    }
+    release(&oldest_proc->lock);
+#endif
+
   }
 }
 
