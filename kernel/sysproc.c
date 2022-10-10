@@ -99,3 +99,13 @@ sys_trace(void)
   trace(mask);
   return 0;
 }
+
+// set static priority of a process.
+uint64
+sys_setpri(void)
+{
+  int new_priority, pid;
+  argint(0, &new_priority);
+  argint(1, &pid);
+  return set_priority(new_priority, pid);
+}

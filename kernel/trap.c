@@ -78,7 +78,9 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
+#ifdef RR
     yield();
+#endif
 
   usertrapret();
 }
@@ -168,11 +170,14 @@ kerneltrap()
   w_sstatus(sstatus);
 }
 
+
+
 void
 clockintr()
 {
   acquire(&tickslock);
   ticks++;
+  update_ticks();
   wakeup(&ticks);
   release(&tickslock);
 }

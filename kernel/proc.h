@@ -108,4 +108,9 @@ struct proc {
   int trace_mask;
 
   uint64 ctime;                 // process creation time
+
+  // PBS
+  uint64 s_priority, d_priority, niceness;
+  uint64 sleepticks, runticks;
+  uint64 num_scheduled;
 };
