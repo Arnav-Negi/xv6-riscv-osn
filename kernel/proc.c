@@ -716,10 +716,11 @@ sigalarm(int interval, void (*handler)())
 }
 
 // call function after interval CPU ticks
-void
+int
 sigreturn(void)
 {
   struct proc * p = myproc();
   p->inhandler = 0;
   *(p->trapframe) = *(p->stored_trapframe);
+  return p->trapframe->a0;
 }
