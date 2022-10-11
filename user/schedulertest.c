@@ -32,8 +32,8 @@ int main() {
       }
   }
   for(;n > 0; n--) {
-      if(waitx(0,&wtime,&rtime) >= 0) {
-          printf("\n%d  %d\n", rtime, wtime);
+      if((pid = waitx(0,&wtime,&rtime)) >= 0) {
+          printf("\n%d: %d  %d\n", pid, rtime, wtime);
           trtime += rtime;
           twtime += wtime;
       } 
