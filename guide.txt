@@ -6,3 +6,9 @@ Adding syscalls:
 4. add syscall handler in syscall.c line 86 & 112
 5. implement syscall handler for sys_syscall in sysproc.c
 6. implement main function in proc.c
+
+LBS:
+1. int settickets(int num)
+2. allocproc.c: initialise tickets as 1
+4. fork() in proc.c: set tickets as parent tickets after allocproc is called.
+5. in trap.c, maintain the number of ticks that the process has run for

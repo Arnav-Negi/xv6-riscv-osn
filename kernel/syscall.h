@@ -1,4 +1,5 @@
 // System call numbers
+
 #define SYS_fork        1
 #define SYS_exit        2
 #define SYS_wait        3
@@ -23,3 +24,4 @@
 #define SYS_trace       22
 #define SYS_sigalarm    23
 #define SYS_sigreturn   24
+#define SYS_settickets  25

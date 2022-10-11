@@ -125,6 +125,10 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->trace_mask = 0;
+
+  p->ctime = ticks;       // initialise creation time with the `ticks` global variable
+  p->tickets = 1;         // initialise the number of tickets as 1
+
   p->inhandler = 0;
   p->alarmhandler = 0;
   p->interval = 0;
@@ -313,6 +317,9 @@ fork(void)
   // copy trace bits
   np->trace_mask = p->trace_mask;
 
+  // copy tickets
+  np->tickets = p->tickets;
+
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
 
@@ -448,6 +455,44 @@ wait(uint64 addr)
   }
 }
 
+// rand() function from user/grind.c
+// from FreeBSD.
+int
+do_rand(unsigned long *ctx)
+{
+/*
+ * Compute x = (7^5 * x) mod (2^31 - 1)
+ * without overflowing 31 bits:
+ *      (2^31 - 1) = 127773 * (7^5) + 2836
+ * From "Random number generators: good ones are hard to find",
+ * Park and Miller, Communications of the ACM, vol. 31, no. 10,
+ * October 1988, p. 1195.
+ */
+    long hi, lo, x;
+
+    /* Transform to [1, 0x7ffffffe] range. */
+    x = (*ctx % 0x7ffffffe) + 1;
+    hi = x / 127773;
+    lo = x % 127773;
+    x = 16807 * lo - 2836 * hi;
+    if (x < 0)
+        x += 0x7fffffff;
+    /* Transform to [0, 0x7ffffffd] range. */
+    x--;
+    *ctx = x;
+    return (x);
+}
+
+unsigned long rand_next = 1;
+
+int
+rand(void)
+{
+  return (do_rand(&rand_next));
+}
+
+
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -460,12 +505,13 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  
+
   c->proc = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
+#ifdef RR
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
@@ -482,6 +528,90 @@ scheduler(void)
       }
       release(&p->lock);
     }
+#endif
+
+#ifdef FCFS
+    struct proc *oldest_proc = 0;
+    // iterate through all the processes to find the 
+    // runnable process (if any) with the lowest creation time
+    for(p = proc; p < &proc[NPROC]; p++)
+    {
+      acquire(&p->lock);
+      if (!oldest_proc && p->state == RUNNABLE)
+      {
+        oldest_proc = p;
+      }
+      else if(oldest_proc && (p->state == RUNNABLE && p->ctime < oldest_proc->ctime))
+      {
+        release(&oldest_proc->lock);
+        oldest_proc = p;
+      }
+      else
+        release(&p->lock);
+    }
+    // check if oldest process is runnable
+    // if so, then context switch to it
+    if(oldest_proc)
+    {
+      oldest_proc->state = RUNNING;
+      c->proc = oldest_proc;
+      swtch(&c->context, &oldest_proc->context);
+      c->proc = 0;
+      release(&oldest_proc->lock);
+    }
+#endif
+
+#ifdef LBS
+  uint64 total_tickets = 0; // total tickets for runnable procs
+  int n_runnable = 0;
+  struct proc *runnable_procs[NPROC] = {0};
+
+  for(p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+    if(p->state == RUNNABLE)
+    {
+      runnable_procs[n_runnable++] = p;
+      total_tickets += p->tickets;
+      continue; // do not release runnable processes yet
+    }
+    release(&p->lock);
+  }
+
+  int rand_ticket;
+  if(total_tickets == 0)
+  {
+    rand_ticket = 0;
+  }
+  else
+  {
+    // 1 indexed
+    rand_ticket = rand() % total_tickets + 1;
+  }
+
+  int index = -1;
+  while(rand_ticket > 0)
+  {
+    index++;
+    p = runnable_procs[index];
+    rand_ticket -= p->tickets;
+  }
+  
+  for(int i = 0; i < n_runnable; i++)
+  {
+    if(i != index)
+      release(&runnable_procs[i]->lock);
+  }
+
+  if(index >= 0 && runnable_procs[index] != 0)
+  {
+    runnable_procs[index]->state = RUNNING;
+    c->proc = runnable_procs[index];
+    swtch(&c->context, &runnable_procs[index]->context);
+    c->proc = 0;
+    release(&runnable_procs[index]->lock);
+  }
+#endif
   }
 }
 
@@ -704,6 +834,15 @@ trace(int trace_mask)
   struct proc *p = myproc();
   p->trace_mask = trace_mask;
 }
+
+// settickets
+int
+settickets(int number)
+{
+  struct proc *p = myproc();
+  p->tickets += number;
+  return p->tickets;
+ }
 
 // call function after interval CPU ticks
 void
