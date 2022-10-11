@@ -127,7 +127,7 @@ found:
   p->trace_mask = 0;
   p->ctime = ticks;       // initialise creation time with the `ticks` global variable
   p->tickets = 1;         // initialise the number of tickets as 1
-  
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -577,7 +577,7 @@ scheduler(void)
   else
   {
     // 1 indexed
-    rand_ticket = rand() % total_tickets;
+    rand_ticket = rand() % total_tickets + 1;
   }
 
   int index = (rand_ticket == 0 ? 0 : -1);
