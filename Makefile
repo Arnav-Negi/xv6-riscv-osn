@@ -178,19 +178,19 @@ qemu-gdb: $K/kernel .gdbinit fs.img
 
 SCHED = -D RR
 
-ifeq ($SCHEDULER, RR)
+ifeq ($(SCHEDULER), RR)
 	SCHED = -D RR
 endif
-ifeq ($SCHEDULER, FCFS)
+ifeq ($(SCHEDULER), FCFS)
 	SCHED = -D FCFS
 endif
-ifeq ($SCHEDULER, LBS)
+ifeq ($(SCHEDULER), LBS)
 	SCHED = -D LBS
 endif
-ifeq ($SCHEDULER, PBS)
+ifeq ($(SCHEDULER), PBS)
 	SCHED = -D PBS
 endif
-ifeq ($SCHEDULER, MLFQ)
+ifeq ($(SCHEDULER), MLFQ)
 	SCHED = -D MLFQ
 endif
 

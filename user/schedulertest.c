@@ -27,7 +27,7 @@ int main() {
           exit(0);
       } else {
 #ifdef PBS
-        setpriority(60-IO+n, pid); // Will only matter for PBS, set lower priority for IO bound processes 
+        set_priority(60-IO+n, pid); // Will only matter for PBS, set lower priority for IO bound processes 
 #endif
       }
   }

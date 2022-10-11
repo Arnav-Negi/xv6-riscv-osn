@@ -102,7 +102,7 @@ sys_trace(void)
 
 // set static priority of a process.
 uint64
-sys_setpri(void)
+sys_set_priority(void)
 {
   int new_priority, pid;
   argint(0, &new_priority);

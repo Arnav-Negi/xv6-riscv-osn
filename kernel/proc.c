@@ -572,22 +572,28 @@ void scheduler(void)
 #endif
 
 #ifdef FCFS
-    struct proc *oldest_proc = proc;
+    struct proc *oldest_proc = 0;
     // iterate through all the processes to find the
     // runnable process (if any) with the lowest creation time
     for (p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if (p->state == RUNNABLE && p->ctime < oldest_proc->ctime)
+      if (!oldest_proc && p->state == RUNNABLE)
       {
         oldest_proc = p;
       }
+      else if (oldest_proc && p->state == RUNNABLE && p->ctime < oldest_proc->ctime)
+      {
+        release(&oldest_proc->lock);
+        oldest_proc = p;
+      }
+      else
       release(&p->lock);
     }
+
     // check if oldest process is runnable
     // if so, then context switch to it
-    acquire(&(oldest_proc->lock));
-    if (oldest_proc->state == RUNNABLE)
+    if (oldest_proc && oldest_proc->state == RUNNABLE)
     {
       oldest_proc->state = RUNNING;
       c->proc = oldest_proc;
@@ -595,13 +601,14 @@ void scheduler(void)
 
       c->proc = 0;
     }
+    if (oldest_proc)
     release(&oldest_proc->lock);
 #endif
 
 #ifdef PBS
-    struct proc *prio_proc = 0, p;
+    struct proc *prio_proc = 0;
     uint64 dp, minDP;
-    for (struct proc *p = proc; p < &proc[NPROC]; p++)
+    for (p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
 
@@ -913,15 +920,17 @@ void trace(int trace_mask)
 // set priority of a process with given pid.
 int set_priority(int new_priority, int pid)
 {
-  struct proc *p, *currproc = myproc();
+  printf("In set priority pid : %d, priority : %d\n", pid, new_priority);
+  struct proc *p;
   int old_priority;
   for (p = proc; p < &proc[NPROC]; p++)
   {
-    if (currproc == p)
+    if (myproc() == p)
     {
       if (p->pid == pid)
       {
         old_priority = p->s_priority;
+        p->s_priority = new_priority;
         p->niceness = 5;
         p->sleepticks = 0;
         p->runticks = 0;
@@ -938,6 +947,7 @@ int set_priority(int new_priority, int pid)
       if (p->pid == pid)
       {
         old_priority = p->s_priority;
+        p->s_priority = new_priority;
         p->niceness = 5;
         p->sleepticks = 0;
         p->runticks = 0;

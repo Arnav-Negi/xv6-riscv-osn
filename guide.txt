@@ -5,3 +5,4 @@ Adding syscalls:
 4. add syscall handler in syscall.c line 86 & 112
 5. implement syscall handler for sys_syscall in sysproc.c
 6. implement main function in proc.c
+7. add syscall in user.h
