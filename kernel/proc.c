@@ -488,8 +488,7 @@ unsigned long rand_next = 1;
 int
 rand(void)
 {
-
-    return (do_rand(&rand_next));
+  return (do_rand(&rand_next));
 }
 
 
@@ -538,25 +537,28 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if(oldest_proc->state != RUNNABLE || (p->state == RUNNABLE && p->ctime < oldest_proc->ctime))
+      if (!oldest_proc && p->state == RUNNABLE)
+      {
+        oldest_proc = p;
+      }
+      else if(oldest_proc && (p->state == RUNNABLE && p->ctime < oldest_proc->ctime))
       {
         release(&oldest_proc->lock);
         oldest_proc = p;
-        continue;
       }
-      release(&p->lock);
+      else
+        release(&p->lock);
     }
     // check if oldest process is runnable
     // if so, then context switch to it
-    if(oldest_proc->state == RUNNABLE)
+    if(oldest_proc)
     {
       oldest_proc->state = RUNNING;
       c->proc = oldest_proc;
       swtch(&c->context, &oldest_proc->context);
-
       c->proc = 0;
+      release(&oldest_proc->lock);
     }
-    release(&oldest_proc->lock);
 #endif
 
 #ifdef LBS
@@ -587,11 +589,12 @@ scheduler(void)
     rand_ticket = rand() % total_tickets + 1;
   }
 
-  int index = (rand_ticket == 0 ? 0 : -1);
+  int index = -1;
   while(rand_ticket > 0)
   {
-    rand_ticket -= p->tickets;
     index++;
+    p = runnable_procs[index];
+    rand_ticket -= p->tickets;
   }
   
   for(int i = 0; i < n_runnable; i++)
@@ -600,15 +603,14 @@ scheduler(void)
       release(&runnable_procs[i]->lock);
   }
 
-  if(runnable_procs[index] != 0)
+  if(index >= 0 && runnable_procs[index] != 0)
   {
     runnable_procs[index]->state = RUNNING;
     c->proc = runnable_procs[index];
     swtch(&c->context, &runnable_procs[index]->context);
-
     c->proc = 0;
+    release(&runnable_procs[index]->lock);
   }
-  release(&runnable_procs[index]->tickets);
 #endif
   }
 }
