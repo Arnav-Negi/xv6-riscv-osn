@@ -126,7 +126,8 @@ found:
   p->state = USED;
   p->trace_mask = 0;
   p->ctime = ticks;       // initialise creation time with the `ticks` global variable
-
+  p->tickets = 1;         // initialise the number of tickets as 1
+  
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -304,6 +305,9 @@ fork(void)
   // copy trace bits
   np->trace_mask = p->trace_mask;
 
+  // copy tickets
+  np->tickets = p->tickets;
+
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
 
@@ -439,6 +443,45 @@ wait(uint64 addr)
   }
 }
 
+// rand() function from user/grind.c
+// from FreeBSD.
+int
+do_rand(unsigned long *ctx)
+{
+/*
+ * Compute x = (7^5 * x) mod (2^31 - 1)
+ * without overflowing 31 bits:
+ *      (2^31 - 1) = 127773 * (7^5) + 2836
+ * From "Random number generators: good ones are hard to find",
+ * Park and Miller, Communications of the ACM, vol. 31, no. 10,
+ * October 1988, p. 1195.
+ */
+    long hi, lo, x;
+
+    /* Transform to [1, 0x7ffffffe] range. */
+    x = (*ctx % 0x7ffffffe) + 1;
+    hi = x / 127773;
+    lo = x % 127773;
+    x = 16807 * lo - 2836 * hi;
+    if (x < 0)
+        x += 0x7fffffff;
+    /* Transform to [0, 0x7ffffffd] range. */
+    x--;
+    *ctx = x;
+    return (x);
+}
+
+unsigned long rand_next = 1;
+
+int
+rand(void)
+{
+
+    return (do_rand(&rand_next));
+}
+
+
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -477,21 +520,27 @@ scheduler(void)
 #endif
 
 #ifdef FCFS
-    struct proc *oldest_proc = proc;
+    struct proc *oldest_proc = 0;
     // iterate through all the processes to find the 
     // runnable process (if any) with the lowest creation time
     for(p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if(p->state == RUNNABLE && p->ctime < oldest_proc->ctime)
+      if(oldest_proc == 0)
       {
         oldest_proc = p;
+        continue;
+      }
+      if(p->state == RUNNABLE && p->ctime < oldest_proc->ctime)
+      {
+        release(&oldest_proc->lock);
+        oldest_proc = p;
+        continue;
       }
       release(&p->lock);
     }
     // check if oldest process is runnable
     // if so, then context switch to it
-    acquire(&(oldest_proc->lock));
     if(oldest_proc->state == RUNNABLE)
     {
       oldest_proc->state = RUNNING;
@@ -503,6 +552,57 @@ scheduler(void)
     release(&oldest_proc->lock);
 #endif
 
+#ifdef LBS
+  uint64 total_tickets = 0; // total tickets for runnable procs
+  int n_runnable = 0;
+  struct proc *runnable_procs[NPROC] = {0};
+
+  for(p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+    if(p->state == RUNNABLE)
+    {
+      runnable_procs[n_runnable++] = p;
+      total_tickets += p->tickets;
+      continue; // do not release runnable processes yet
+    }
+    release(&p->lock);
+  }
+
+  int rand_ticket;
+  if(total_tickets == 0)
+  {
+    rand_ticket = 0;
+  }
+  else
+  {
+    // 1 indexed
+    rand_ticket = rand() % total_tickets;
+  }
+
+  int index = (rand_ticket == 0 ? 0 : -1);
+  while(rand_ticket > 0)
+  {
+    rand_ticket -= p->tickets;
+    index++;
+  }
+  
+  for(int i = 0; i < n_runnable; i++)
+  {
+    if(i != index)
+      release(&runnable_procs[i]->lock);
+  }
+
+  if(runnable_procs[index] != 0)
+  {
+    runnable_procs[index]->state = RUNNING;
+    c->proc = runnable_procs[index];
+    swtch(&c->context, &runnable_procs[index]->context);
+
+    c->proc = 0;
+  }
+  release(&runnable_procs[index]->tickets);
+#endif
   }
 }
 
@@ -724,4 +824,13 @@ trace(int trace_mask)
 {
   struct proc *p = myproc();
   p->trace_mask = trace_mask;
+}
+
+// settickets
+int
+settickets(int number)
+{
+  struct proc *p = myproc();
+  p->tickets += number;
+  return p->tickets;
 }

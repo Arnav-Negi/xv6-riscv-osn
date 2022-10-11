@@ -108,4 +108,5 @@ struct proc {
   int trace_mask;
 
   uint64 ctime;                 // process creation time
+  uint64 tickets;               // tickets same as time_slice
 };
