@@ -109,6 +109,7 @@ void            procdump(void);
 void            trace(int);
 void            sigalarm(int, void ());
 int             sigreturn(void);
+int             settickets(int number);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
