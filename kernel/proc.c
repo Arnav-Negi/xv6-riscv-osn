@@ -483,7 +483,7 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if(p->state == RUNNABLE && p->ctime < oldest_proc->ctime)
+      if(oldest_proc->state != RUNNABLE || (p->state == RUNNABLE && p->ctime < oldest_proc->ctime))
       {
         oldest_proc = p;
       }

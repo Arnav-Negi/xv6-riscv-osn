@@ -175,22 +175,22 @@ qemu-gdb: $K/kernel .gdbinit fs.img
 # defining macro for scheduler
 # make qemu SCHEDULER=FCFS
 
-SCHED = -D RR
+SCHED = RR
 
-ifeq ($SCHEDULER, RR)
-	SCHED = -D RR
+ifeq ($(SCHEDULER), RR)
+	SCHED = RR
 endif
-ifeq ($SCHEDULER, FCFS)
-	SCHED = -D FCFS
+ifeq ($(SCHEDULER), FCFS)
+	SCHED = FCFS
 endif
-ifeq ($SCHEDULER, LBS)
-	SCHED = -D LBS
+ifeq ($(SCHEDULER), LBS)
+	SCHED = LBS
 endif
-ifeq ($SCHEDULER, PBS)
-	SCHED = -D PBS
+ifeq ($(SCHEDULER), PBS)
+	SCHED = PBS
 endif
-ifeq ($SCHEDULER, MLFQ)
-	SCHED = -D MLFQ
+ifeq ($(SCHEDULER), MLFQ)
+	SCHED = MLFQ
 endif
 
-CFLAGS += $(SCHED)
+CFLAGS += -D $(SCHED)
