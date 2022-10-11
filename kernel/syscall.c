@@ -99,6 +99,7 @@ extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_setpri(void);
+extern uint64 sys_waitx(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -125,7 +126,8 @@ static uint64 (*syscalls[])(void) = {
     [SYS_mkdir] sys_mkdir,
     [SYS_close] sys_close,
     [SYS_trace] sys_trace,
-    [SYS_set_priority] sys_setpri};
+    [SYS_set_priority] sys_setpri,
+    [SYS_waitx] sys_waitx};
 
 static char *syscall_names[] = {
     [SYS_fork] "fork",
@@ -150,7 +152,8 @@ static char *syscall_names[] = {
     [SYS_mkdir] "mkdir",
     [SYS_close] "close",
     [SYS_trace] "trace",
-    [SYS_set_priority] "set_priority"};
+    [SYS_set_priority] "set_priority",
+    [SYS_waitx] "waitx"};
 
 static uint64 syscall_argcounts[] = {
     [SYS_fork] 0,
@@ -175,7 +178,8 @@ static uint64 syscall_argcounts[] = {
     [SYS_mkdir] 1,
     [SYS_close] 1,
     [SYS_trace] 1,
-    [SYS_set_priority] 2};
+    [SYS_set_priority] 2,
+    [SYS_waitx] 3};
 
 void syscall(void)
 {

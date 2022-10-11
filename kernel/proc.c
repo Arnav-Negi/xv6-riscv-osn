@@ -128,8 +128,10 @@ found:
   p->state = USED;
   p->trace_mask = 0;
   p->ctime = ticks; // initialise creation time with the `ticks` global variable
+  p->rtime = 0;
+  p->etime = 0;
 
-#ifdef PBS
+#if defined(PBS)
   p->niceness = 5;
   p->num_scheduled = 0;
   p->runticks = 0;
@@ -399,6 +401,7 @@ void exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
+  p->etime = ticks;
 
   release(&wait_lock);
 
@@ -460,6 +463,59 @@ int wait(uint64 addr)
     sleep(p, &wait_lock); // DOC: wait-sleep
   }
 }
+
+// Wait for a child process to exit and return its pid.
+// Return -1 if this process has no children.
+int
+waitx(uint64 addr, uint* wtime, uint* rtime)
+{
+  struct proc *np;
+  int havekids, pid;
+  struct proc *p = myproc();
+
+  acquire(&wait_lock);
+
+  for(;;){
+    // Scan through table looking for exited children.
+    havekids = 0;
+    for(np = proc; np < &proc[NPROC]; np++){
+      if(np->parent == p){
+        // make sure the child isn't still in exit() or swtch().
+        acquire(&np->lock);
+
+        havekids = 1;
+        if(np->state == ZOMBIE){
+          // Found one.
+          pid = np->pid;
+          *rtime = np->rtime;
+          *wtime = np->etime - np->ctime - np->rtime;
+          printf("priority: %d\n", np->s_priority);
+          if(addr != 0 && copyout(p->pagetable, addr, (char *)&np->xstate,
+                                  sizeof(np->xstate)) < 0) {
+            release(&np->lock);
+            release(&wait_lock);
+            return -1;
+          }
+          freeproc(np);
+          release(&np->lock);
+          release(&wait_lock);
+          return pid;
+        }
+        release(&np->lock);
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || p->killed){
+      release(&wait_lock);
+      return -1;
+    }
+
+    // Wait for a child to exit.
+    sleep(p, &wait_lock);  //DOC: wait-sleep
+  }
+}
+
 
 uint64 max(uint64 a, uint64 b) { return (a > b ? a : b); }
 uint64 min(uint64 a, uint64 b) { return (a > b ? b : a); }
@@ -831,6 +887,7 @@ void update_ticks()
     switch (p->state)
     {
     case RUNNING:
+      p->rtime++;
       p->runticks++;
       break;
     case SLEEPING:

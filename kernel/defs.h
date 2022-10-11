@@ -109,7 +109,9 @@ void            procdump(void);
 void            trace(int);
 void            update_ticks(void);
 int             get_DP(struct proc *);
-int             set_priority(int, int);          
+int             set_priority(int, int);
+int             waitx(uint64, uint*, uint*);  
+      
 
 // swtch.S
 void            swtch(struct context*, struct context*);
