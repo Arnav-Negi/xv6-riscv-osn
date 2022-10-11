@@ -114,6 +114,13 @@ struct proc {
 
   int trace_mask;
 
-  uint64 ctime;                 // process creation time
   uint64 tickets;               // tickets same as time_slice
+  uint rtime;                   // How long the process ran for
+  uint ctime;                   // When was the process created 
+  uint etime;                   // When did the process exited
+
+  // PBS
+  uint64 s_priority, niceness;
+  uint64 sleepticks, runticks;
+  uint64 num_scheduled;
 };

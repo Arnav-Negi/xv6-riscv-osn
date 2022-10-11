@@ -92,6 +92,9 @@ void usertrap(void)
       p->trapframe->epc = (uint64)p->alarmhandler;
     }
     yield();
+#ifdef RR
+    yield();
+#endif
   }
 
   usertrapret();
@@ -164,7 +167,7 @@ void kerneltrap()
   }
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
+  if (which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
   {
 #ifdef RR
     yield();
@@ -177,7 +180,7 @@ void kerneltrap()
   yield();
 #endif
   }
-    
+
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.
   w_sepc(sepc);
@@ -188,6 +191,7 @@ void clockintr()
 {
   acquire(&tickslock);
   ticks++;
+  update_ticks();
   wakeup(&ticks);
   release(&tickslock);
 }

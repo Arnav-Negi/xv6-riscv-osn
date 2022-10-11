@@ -110,6 +110,11 @@ void            trace(int);
 void            sigalarm(int, void ());
 int             sigreturn(void);
 int             settickets(int number);
+void            update_ticks(void);
+int             get_DP(struct proc *);
+int             set_priority(int, int);
+int             waitx(uint64, uint*, uint*);  
+      
 
 // swtch.S
 void            swtch(struct context*, struct context*);
