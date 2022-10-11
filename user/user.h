@@ -23,6 +23,8 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 void trace(int);
+void sigalarm(int, void ());
+int sigreturn(void);
 int settickets(int number);
 
 // ulib.c

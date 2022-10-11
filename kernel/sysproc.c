@@ -100,7 +100,27 @@ sys_trace(void)
   return 0;
 }
 
-uint8
+// call function at regular intervals of CPU ticks.
+uint64
+sys_sigalarm(void)
+{
+  int interval;
+  uint64 handlerptr;
+  argint(0, &interval);
+  argaddr(1, &handlerptr);
+  void (*handler)() = (void (*)) handlerptr;
+  sigalarm(interval, handler);
+  return 0;
+}
+
+// restore proccess state from before handler call.
+uint64
+sys_sigreturn(void)
+{
+  return sigreturn();
+}
+
+uint64
 sys_settickets(void)
 {
   uint64 number;

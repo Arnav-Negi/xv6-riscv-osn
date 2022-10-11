@@ -105,6 +105,13 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
+  // sigalarm variables.
+  int interval;
+  int CPU_ticks;
+  int inhandler;
+  void (*alarmhandler) ();
+  struct trapframe * stored_trapframe;
+
   int trace_mask;
 
   uint64 ctime;                 // process creation time

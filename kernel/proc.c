@@ -125,11 +125,23 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->trace_mask = 0;
+
   p->ctime = ticks;       // initialise creation time with the `ticks` global variable
   p->tickets = 1;         // initialise the number of tickets as 1
 
+  p->inhandler = 0;
+  p->alarmhandler = 0;
+  p->interval = 0;
+  p->CPU_ticks = 0;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  if((p->stored_trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -828,4 +840,24 @@ settickets(int number)
   struct proc *p = myproc();
   p->tickets += number;
   return p->tickets;
+ }
+
+// call function after interval CPU ticks
+void
+sigalarm(int interval, void (*handler)())
+{
+  struct proc *p;
+  p = myproc();
+  p->interval = interval;
+  p->alarmhandler = handler;
+}
+
+// call function after interval CPU ticks
+int
+sigreturn(void)
+{
+  struct proc * p = myproc();
+  p->inhandler = 0;
+  *(p->trapframe) = *(p->stored_trapframe);
+  return p->trapframe->a0;
 }

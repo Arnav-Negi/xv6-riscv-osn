@@ -1,6 +1,7 @@
 Adding syscalls:
 1. add entry("syscallname") in usys.pl
 2. add syscall in defs.h
+3. add definition in user.h
 3. define SYS_syscall in syscall.h
 4. add syscall handler in syscall.c line 86 & 112
 5. implement syscall handler for sys_syscall in sysproc.c
