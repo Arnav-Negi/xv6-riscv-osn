@@ -2,6 +2,13 @@
     "files.associations": {
         "stat.h": "c",
         "user.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "types.h": "c",
+        "param.h": "c",
+        "riscv.h": "c",
+        "spinlock.h": "c",
+        "proc.h": "c",
+        "defs.h": "c",
+        "memlayout.h": "c"
     }
 }

@@ -99,3 +99,12 @@ sys_trace(void)
   trace(mask);
   return 0;
 }
+
+uint8
+sys_settickets(void)
+{
+  uint64 number;
+  argaddr(0, &number);
+  int ret_tickets = settickets(number);
+  return ret_tickets;
+}

@@ -158,7 +158,10 @@ kerneltrap()
 #endif
 
 #ifdef FCFS
+#endif
 
+#ifdef LBS
+  yield();
 #endif
   }
     

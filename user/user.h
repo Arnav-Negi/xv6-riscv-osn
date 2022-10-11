@@ -23,6 +23,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 void trace(int);
+int settickets(int number);
 
 // ulib.c
 int stat(const char*, struct stat*);
