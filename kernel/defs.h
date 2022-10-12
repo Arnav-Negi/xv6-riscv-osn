@@ -8,6 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct pginfo;
 
 // bio.c
 void            binit(void);
@@ -63,6 +64,8 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
+void            inc_links(void *);
+void            dec_links(void *);
 
 // log.c
 void            initlog(int, struct superblock*);

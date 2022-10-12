@@ -329,6 +329,8 @@ int fork(void)
     release(&np->lock);
     return -1;
   }
+
+  np->pagetable = p->pagetable;
   np->sz = p->sz;
 
   // copy saved user registers.

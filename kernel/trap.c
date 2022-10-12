@@ -47,6 +47,66 @@ void usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
 
+  if (r_scause() == 15)
+  {
+    if (p->pagetable == 0)
+    {
+      panic("pagetable is null.\n");
+    }
+    uint64 va = r_stval();
+    if (p->sz < va)
+    {
+      printf("error occured outside proc.\n");
+      p->killed = 1;
+      return;
+    }
+
+    va = PGROUNDDOWN(va);
+
+    pte_t *pte = walk(p->pagetable, va, 0); 
+
+    if (!pte) {
+      panic("pte is null.\n");
+    }
+
+    // write page fault.
+    // check for COW bit.
+    if (*pte & PTE_COW)
+    {
+      // allocate pagetable for p.
+      uint64 pa, i;
+      uint flags, err = 0;
+      char *mem;
+
+      for (i = 0; i < p->sz; i += PGSIZE)
+      {
+        pa = PTE2PA(*pte);
+        flags = PTE_FLAGS(*pte);
+
+        flags = (flags & (~PTE_COW)) | PTE_W;
+        if ((mem = kalloc()) == 0)
+        {
+          err = 1;
+          break;
+        }
+        memmove(mem, (char *)pa, PGSIZE);
+        uvmunmap(p->pagetable, va, 1, 1);
+        if (mappages(p->pagetable, i, PGSIZE, (uint64)mem, flags) != 0)
+        {
+          kfree(mem);
+          err = 1;
+          break;
+        }
+      }
+
+      if (err)
+      {
+        uvmunmap(p->pagetable, 0, i / PGSIZE, 1);
+        return;
+      }
+    }
+  }
+
   if (r_scause() == 8)
   {
     // system call
@@ -81,9 +141,9 @@ void usertrap(void)
   // give up the CPU if this is a timer interrupt.
   if (which_dev == 2)
   {
-    struct proc * p = myproc();
+    struct proc *p = myproc();
     p->CPU_ticks++;
-    
+
     if (p->CPU_ticks >= p->interval && p->interval != 0 && !p->inhandler)
     {
       p->inhandler = 1;
@@ -177,7 +237,7 @@ void kerneltrap()
 #endif
 
 #ifdef LBS
-  yield();
+    yield();
 #endif
   }
 
