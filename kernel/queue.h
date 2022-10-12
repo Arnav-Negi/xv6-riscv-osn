@@ -4,9 +4,10 @@
 #include "param.h"
 
 struct queue {
-    int head;
     int back;
-    struct proc* que[64];
+    int size;
+    int time_limit;             // max number of ticks that a process can run while inside a queue
+    struct proc* que[NPROC];
 };
 
 extern struct queue queue[5];

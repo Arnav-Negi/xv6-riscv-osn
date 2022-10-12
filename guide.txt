@@ -13,3 +13,8 @@ LBS:
 2. allocproc.c: initialise tickets as 1
 4. fork() in proc.c: set tickets as parent tickets after allocproc is called.
 5. in trap.c, maintain the number of ticks that the process has run for
+
+MLFQ:
+1. add fields in proc.h
+2. implement queue
+3. scheduler(): 

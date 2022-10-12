@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "queue.h"
 
 struct cpu cpus[NCPU];
 
@@ -144,6 +145,11 @@ found:
   p->runticks = 0;
   p->sleepticks = 0;
   p->s_priority = 60;
+#endif
+
+#ifdef MLFQ
+  p->inqueue = 0;
+  p->q_num = -1;
 #endif
 
   // Allocate a trapframe page.
@@ -772,9 +778,35 @@ void scheduler(void)
       c->proc = prio_proc;
       swtch(&c->context, &prio_proc->context);
       c->proc = 0;
+
       release(&prio_proc->lock);
     }
 #endif
+
+#ifdef MLFQ
+    for (p = proc; p < &proc[NPROC]; p++)
+    {
+      if(p->state == RUNNABLE && !p->inqueue)
+      {
+        push_proc(p, p->q_num);
+      }
+    }
+
+    for(int i = 0; i < 5; i++)
+    {
+      if(queue[i].size > 0)
+      {
+        struct proc* prio_proc = pop_proc(i);
+        
+        prio_proc->state == RUNNING;
+
+        c->proc = prio_proc;
+        swtch(&c->context, &prio_proc->context);
+        c->proc = 0;
+      }
+    }
+#endif
+
   }
 }
 
