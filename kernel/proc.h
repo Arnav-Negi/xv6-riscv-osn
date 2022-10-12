@@ -123,4 +123,11 @@ struct proc {
   uint64 s_priority, niceness;
   uint64 sleepticks, runticks;
   uint64 num_scheduled;
+
+  // MLFQ
+#ifdef MLFQ
+  int inqueue;                  // Is the process in a queue? then 1 else 0
+  int q_num;                    // which queue is the process in?
+  
+#endif
 };
