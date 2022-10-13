@@ -5,7 +5,6 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
-#include "queue.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -91,8 +90,9 @@ void usertrap(void)
       p->CPU_ticks = 0;
       *(p->stored_trapframe) = *(p->trapframe);
       p->trapframe->epc = (uint64)p->alarmhandler;
+      yield();
     }
-    yield();
+    
 #ifdef RR
     yield();
 #endif
@@ -102,7 +102,7 @@ void usertrap(void)
 #endif
 
 #ifdef MLFQ
-    yield();
+    handle_specs();
 #endif
   }
 

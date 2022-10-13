@@ -14,7 +14,28 @@ LBS:
 4. fork() in proc.c: set tickets as parent tickets after allocproc is called.
 5. in trap.c, maintain the number of ticks that the process has run for
 
+COW:
+1. wipe out PTE_W on pte of parent for each pte.
+2. change uvmcopy to map the ptes of parent to child.
+3. if page fault, check which: if pte write exception, allocate new paeg for child just like in old uvmcopy.
+
 MLFQ:
-1. add fields in proc.h
-2. implement queue
-3. scheduler(): 
+proc.h: 
+1. Add queueno. in proc
+2. Add ticks used
+3. Add wait time for aging.
+4. inqueue
+
+mlfq.h:
+DONT MAKE QUEUES
+1. mlfq scheduler : returns proc * to be scheduled.
+    find best non empty queue, run first process, reset wait run times.
+2. bring proc back: 
+    for processes, that left queeus, for IO bring them back to same queue.
+    use inqueue for that
+    for processes in queues, that want to leave (not running not runnable), change inqueue, push out
+    if running proc has exhausted, push into next queue and yield at the end.
+    if runnable, wait time > max age, push into next queue.
+    handle premption in higher priority queue.
+
+3. trap.c : handle ticks, in user trap, call bookeeper.

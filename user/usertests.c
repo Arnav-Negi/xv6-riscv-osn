@@ -3050,11 +3050,11 @@ drivetests(int quick, int continuous, char *justone) {
     printf("usertests starting\n");
     int free0 = countfree();
     int free1 = 0;
-    // if (runtests(quicktests, justone)) {
-    //   if(continuous != 2) {
-    //     return 1;
-    //   }
-    // }
+    if (runtests(quicktests, justone)) {
+      if(continuous != 2) {
+        return 1;
+      }
+    }
     if(!quick) {
       if (justone == 0)
         printf("usertests slow tests starting\n");
@@ -3080,6 +3080,8 @@ main(int argc, char *argv[])
   int continuous = 0;
   int quick = 0;
   char *justone = 0;
+
+  twochildren("asdad");
 
   if(argc == 2 && strcmp(argv[1], "-q") == 0){
     quick = 1;

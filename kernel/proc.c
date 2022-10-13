@@ -5,7 +5,6 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
-#include "queue.h"
 
 struct cpu cpus[NCPU];
 
@@ -129,7 +128,7 @@ found:
   p->state = USED;
   p->trace_mask = 0;
 
-  p->tickets = 1;   // initialise the number of tickets as 1
+  p->tickets = 1; // initialise the number of tickets as 1
 
   p->inhandler = 0;
   p->alarmhandler = 0;
@@ -137,6 +136,7 @@ found:
   p->CPU_ticks = 0;
   p->ctime = ticks; // initialise creation time with the `ticks` global variable
   p->rtime = 0;
+  p->total_rtime = 0;
   p->etime = 0;
 
 #if defined(PBS)
@@ -150,7 +150,7 @@ found:
 #ifdef MLFQ
   p->inqueue = 0;
   p->q_num = 0;
-  p->tsr = 0;
+  p->rtime = 0;
   p->wtime = 0;
 #endif
 
@@ -162,7 +162,8 @@ found:
     return 0;
   }
 
-  if((p->stored_trapframe = (struct trapframe *)kalloc()) == 0){
+  if ((p->stored_trapframe = (struct trapframe *)kalloc()) == 0)
+  {
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -493,8 +494,7 @@ int wait(uint64 addr)
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
-int
-waitx(uint64 addr, uint* wtime, uint* rtime)
+int waitx(uint64 addr, uint *wtime, uint *rtime)
 {
   struct proc *np;
   int havekids, pid;
@@ -502,23 +502,28 @@ waitx(uint64 addr, uint* wtime, uint* rtime)
 
   acquire(&wait_lock);
 
-  for(;;){
+  for (;;)
+  {
     // Scan through table looking for exited children.
     havekids = 0;
-    for(np = proc; np < &proc[NPROC]; np++){
-      if(np->parent == p){
+    for (np = proc; np < &proc[NPROC]; np++)
+    {
+      if (np->parent == p)
+      {
         // make sure the child isn't still in exit() or swtch().
         acquire(&np->lock);
 
         havekids = 1;
-        if(np->state == ZOMBIE){
+        if (np->state == ZOMBIE)
+        {
           // Found one.
           pid = np->pid;
-          *rtime = np->rtime;
-          *wtime = np->etime - np->ctime - np->rtime;
+          *rtime = np->total_rtime;
+          *wtime = np->etime - np->ctime - np->total_rtime;
           printf("priority: %d\n", np->s_priority);
-          if(addr != 0 && copyout(p->pagetable, addr, (char *)&np->xstate,
-                                  sizeof(np->xstate)) < 0) {
+          if (addr != 0 && copyout(p->pagetable, addr, (char *)&np->xstate,
+                                   sizeof(np->xstate)) < 0)
+          {
             release(&np->lock);
             release(&wait_lock);
             return -1;
@@ -533,53 +538,50 @@ waitx(uint64 addr, uint* wtime, uint* rtime)
     }
 
     // No point waiting if we don't have any children.
-    if(!havekids || p->killed){
+    if (!havekids || p->killed)
+    {
       release(&wait_lock);
       return -1;
     }
 
     // Wait for a child to exit.
-    sleep(p, &wait_lock);  //DOC: wait-sleep
+    sleep(p, &wait_lock); // DOC: wait-sleep
   }
 }
 
 // rand() function from user/grind.c
 // from FreeBSD.
-int
-do_rand(unsigned long *ctx)
+int do_rand(unsigned long *ctx)
 {
-/*
- * Compute x = (7^5 * x) mod (2^31 - 1)
- * without overflowing 31 bits:
- *      (2^31 - 1) = 127773 * (7^5) + 2836
- * From "Random number generators: good ones are hard to find",
- * Park and Miller, Communications of the ACM, vol. 31, no. 10,
- * October 1988, p. 1195.
- */
-    long hi, lo, x;
+  /*
+   * Compute x = (7^5 * x) mod (2^31 - 1)
+   * without overflowing 31 bits:
+   *      (2^31 - 1) = 127773 * (7^5) + 2836
+   * From "Random number generators: good ones are hard to find",
+   * Park and Miller, Communications of the ACM, vol. 31, no. 10,
+   * October 1988, p. 1195.
+   */
+  long hi, lo, x;
 
-    /* Transform to [1, 0x7ffffffe] range. */
-    x = (*ctx % 0x7ffffffe) + 1;
-    hi = x / 127773;
-    lo = x % 127773;
-    x = 16807 * lo - 2836 * hi;
-    if (x < 0)
-        x += 0x7fffffff;
-    /* Transform to [0, 0x7ffffffd] range. */
-    x--;
-    *ctx = x;
-    return (x);
+  /* Transform to [1, 0x7ffffffe] range. */
+  x = (*ctx % 0x7ffffffe) + 1;
+  hi = x / 127773;
+  lo = x % 127773;
+  x = 16807 * lo - 2836 * hi;
+  if (x < 0)
+    x += 0x7fffffff;
+  /* Transform to [0, 0x7ffffffd] range. */
+  x--;
+  *ctx = x;
+  return (x);
 }
 
 unsigned long rand_next = 1;
 
-int
-rand(void)
+int rand(void)
 {
   return (do_rand(&rand_next));
 }
-
-
 
 uint64 max(uint64 a, uint64 b) { return (a > b ? a : b); }
 uint64 min(uint64 a, uint64 b) { return (a > b ? b : a); }
@@ -637,7 +639,7 @@ void scheduler(void)
 
 #ifdef FCFS
     struct proc *oldest_proc = 0;
-    // iterate through all the processes to find the 
+    // iterate through all the processes to find the
     // runnable process (if any) with the lowest creation time
     for (p = proc; p < &proc[NPROC]; p++)
     {
@@ -652,7 +654,7 @@ void scheduler(void)
         oldest_proc = p;
       }
       else
-      release(&p->lock);
+        release(&p->lock);
     }
 
     // check if oldest process is runnable
@@ -668,55 +670,55 @@ void scheduler(void)
 #endif
 
 #ifdef LBS
-  uint64 total_tickets = 0; // total tickets for runnable procs
-  int n_runnable = 0;
-  struct proc *runnable_procs[NPROC] = {0};
+    uint64 total_tickets = 0; // total tickets for runnable procs
+    int n_runnable = 0;
+    struct proc *runnable_procs[NPROC] = {0};
 
-  for(p = proc; p < &proc[NPROC]; p++)
-  {
-    acquire(&p->lock);
-    if(p->state == RUNNABLE)
+    for (p = proc; p < &proc[NPROC]; p++)
     {
-      runnable_procs[n_runnable++] = p;
-      total_tickets += p->tickets;
-      continue; // do not release runnable processes yet
+      acquire(&p->lock);
+      if (p->state == RUNNABLE)
+      {
+        runnable_procs[n_runnable++] = p;
+        total_tickets += p->tickets;
+        continue; // do not release runnable processes yet
+      }
+      release(&p->lock);
     }
-    release(&p->lock);
-  }
 
-  int rand_ticket;
-  if(total_tickets == 0)
-  {
-    rand_ticket = 0;
-  }
-  else
-  {
-    // 1 indexed
-    rand_ticket = rand() % total_tickets + 1;
-  }
+    int rand_ticket;
+    if (total_tickets == 0)
+    {
+      rand_ticket = 0;
+    }
+    else
+    {
+      // 1 indexed
+      rand_ticket = rand() % total_tickets + 1;
+    }
 
-  int index = -1;
-  while(rand_ticket > 0)
-  {
-    index++;
-    p = runnable_procs[index];
-    rand_ticket -= p->tickets;
-  }
-  
-  for(int i = 0; i < n_runnable; i++)
-  {
-    if(i != index)
-      release(&runnable_procs[i]->lock);
-  }
+    int index = -1;
+    while (rand_ticket > 0)
+    {
+      index++;
+      p = runnable_procs[index];
+      rand_ticket -= p->tickets;
+    }
 
-  if(index >= 0 && runnable_procs[index] != 0)
-  {
-    runnable_procs[index]->state = RUNNING;
-    c->proc = runnable_procs[index];
-    swtch(&c->context, &runnable_procs[index]->context);
-    c->proc = 0;
-    release(&runnable_procs[index]->lock);
-  }
+    for (int i = 0; i < n_runnable; i++)
+    {
+      if (i != index)
+        release(&runnable_procs[i]->lock);
+    }
+
+    if (index >= 0 && runnable_procs[index] != 0)
+    {
+      runnable_procs[index]->state = RUNNING;
+      c->proc = runnable_procs[index];
+      swtch(&c->context, &runnable_procs[index]->context);
+      c->proc = 0;
+      release(&runnable_procs[index]->lock);
+    }
 #endif
 
 #ifdef PBS
@@ -799,7 +801,7 @@ void scheduler(void)
     //   if(quesize(i) > 0)
     //   {
     //     struct proc* prio_proc = pop_proc(i);
-        
+
     //     prio_proc->state = RUNNING;
     //     prio_proc->tsr = 0;
     //     prio_proc->wtime = 0;
@@ -811,10 +813,20 @@ void scheduler(void)
     //     break;
     //   }
     // }
-
+    p = MLFQ_scheduler();
     
+    if (p)
+    {
+      p->state = RUNNING;
+      p->rtime = 0;
+      p->wtime = 0;
+      acquire(&p->lock);
+      c->proc = p;
+      swtch(&c->context, &p->context);
+      c->proc = 0;
+      release(&p->lock);
+    }
 #endif
-
   }
 }
 
@@ -1040,10 +1052,11 @@ void update_ticks()
     switch (p->state)
     {
     case RUNNING:
+      p->total_rtime++;
       p->rtime++;
       p->runticks++;
 #ifdef MLFQ
-      p->tsr++;
+      
 #endif
       break;
     case SLEEPING:
@@ -1051,7 +1064,7 @@ void update_ticks()
       break;
     case RUNNABLE:
 #ifdef MLFQ
-      if(p->inqueue)
+      if (p->inqueue)
         p->wtime++;
 #endif
       break;
@@ -1060,44 +1073,43 @@ void update_ticks()
     }
     release(&p->lock);
   }
-#ifdef MLFQ
-  // ageing
-  for(int i = 1; i < 5; i++)
-  {
-    if(quesize(i) > 0 && quefront(i)->state == RUNNABLE)
-    {
-      if(quefront(i)->wtime == AGETICKS)
-      {
-        struct proc *temp = (struct proc *) pop_proc(i);
-        temp->wtime = 0;
-        push_proc(temp, i-1); // q_num for p is set in push_proc
-      }
-    }
-  }
-  p = myproc();
-  // if p has exhausted its time limit, put it at the 
-  // back of the lower queue and preempt
-  if(p && p->tsr >= (1 << p->q_num))
-  {
-    p->tsr = 0;
-    push_proc(p, p->q_num); // q_num for p is set in push_proc
-    return;
-  }
+// #ifdef MLFQ
+//   // ageing
+//   for (int i = 1; i < 5; i++)
+//   {
+//     if (quesize(i) > 0 && quefront(i)->state == RUNNABLE)
+//     {
+//       if (quefront(i)->wtime == AGETICKS)
+//       {
+//         struct proc *temp = (struct proc *)pop_proc(i);
+//         temp->wtime = 0;
+//         push_proc(temp, i - 1); // q_num for p is set in push_proc
+//       }
+//     }
+//   }
+//   p = myproc();
+//   // if p has exhausted its time limit, put it at the
+//   // back of the lower queue and preempt
+//   if (p && p->tsr >= (1 << p->q_num))
+//   {
+//     p->tsr = 0;
+//     push_proc(p, p->q_num); // q_num for p is set in push_proc
+//     return;
+//   }
 
-  // if there is a process waiting in the upper queues, then
-  // push p at the back of its queue and preempt
-  for(int i = 0; p && i < p->q_num; i++)
-  {
-    if(quesize(i) > 0)
-    {
-      p->tsr = 0;
-      push_proc(p, p->q_num); // q_num for p is set in push_proc
-      return;
-    }
-  }
+//   // if there is a process waiting in the upper queues, then
+//   // push p at the back of its queue and preempt
+//   for (int i = 0; p && i < p->q_num; i++)
+//   {
+//     if (quesize(i) > 0)
+//     {
+//       p->tsr = 0;
+//       push_proc(p, p->q_num); // q_num for p is set in push_proc
+//       return;
+//     }
+//   }
 
-#endif
-
+// #endif
 }
 
 // trace the given process.
@@ -1108,17 +1120,15 @@ void trace(int trace_mask)
 }
 
 // settickets
-int
-settickets(int number)
+int settickets(int number)
 {
   struct proc *p = myproc();
   p->tickets += number;
   return p->tickets;
- }
+}
 
 // call function after interval CPU ticks
-void
-sigalarm(int interval, void (*handler)())
+void sigalarm(int interval, void (*handler)())
 {
   struct proc *p;
   p = myproc();
@@ -1127,10 +1137,9 @@ sigalarm(int interval, void (*handler)())
 }
 
 // call function after interval CPU ticks
-int
-sigreturn(void)
+int sigreturn(void)
 {
-  struct proc * p = myproc();
+  struct proc *p = myproc();
   p->inhandler = 0;
   *(p->trapframe) = *(p->stored_trapframe);
   return p->trapframe->a0;
