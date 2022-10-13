@@ -105,6 +105,5 @@ kalloc(void)
   }
 
   release(&kmem.lock);
-
   return (void *)r;
 }

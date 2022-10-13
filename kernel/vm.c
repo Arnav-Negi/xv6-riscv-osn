@@ -346,28 +346,6 @@ uvmclear(pagetable_t pagetable, uint64 va)
   *pte &= ~PTE_U;
 }
 
-int cowfault(pagetable_t pagetable, uint64 va)
-{
-  if (va >= MAXVA)
-    return -1;
-  pte_t *pte = walk(pagetable, va, 0);
-  if (pte == 0)
-    return -1;
-  if ((*pte & PTE_U) == 0 || (*pte & PTE_V) == 0)
-    return -1;
-  uint64 pa1 = PTE2PA(*pte);
-  uint64 pa2 = (uint64)kalloc();
-  if (pa2 == 0){
-    //panic("cow panic kalloc");
-    return -1;
-  }
- 
-  memmove((void *)pa2, (void *)pa1, PGSIZE);
-  *pte = PA2PTE(pa2) | PTE_U | PTE_V | PTE_W | PTE_X|PTE_R;
-   kfree((void *)pa1);
-  return 0;
-}
-
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.

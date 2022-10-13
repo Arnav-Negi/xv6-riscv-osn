@@ -105,8 +105,7 @@ void usertrap(void)
       }
     }
   }
-
-  if (r_scause() == 8)
+  else if (r_scause() == 8)
   {
     // system call
 
