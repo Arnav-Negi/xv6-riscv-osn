@@ -7,9 +7,6 @@
 #include "defs.h"
 #include "queue.h"
 
-// global queue array
-extern struct queue queue[5];
-
 struct spinlock tickslock;
 uint ticks;
 

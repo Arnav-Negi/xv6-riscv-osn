@@ -796,11 +796,11 @@ void scheduler(void)
 
     for(int i = 0; i < 5; i++)
     {
-      if(queue[i].size > 0)
+      if(quesize(i) > 0)
       {
         struct proc* prio_proc = pop_proc(i);
         
-        prio_proc->state == RUNNING;
+        prio_proc->state = RUNNING;
         prio_proc->tsr = 0;
         prio_proc->wtime = 0;
 
@@ -1062,11 +1062,11 @@ void update_ticks()
   // ageing
   for(int i = 1; i < 5; i++)
   {
-    if(queue[i].size > 0 && queue[i].que[0]->state == RUNNABLE)
+    if(quesize(i) > 0 && quefront(i)->state == RUNNABLE)
     {
-      if(queue[i].que[0]->wtime == AGETICKS)
+      if(quefront(i)->wtime == AGETICKS)
       {
-        struct proc *temp = pop_proc(i);
+        struct proc *temp = (struct proc *) pop_proc(i);
         temp->wtime = 0;
         push_proc(temp, i-1); // q_num for p is set in push_proc
       }
@@ -1086,7 +1086,7 @@ void update_ticks()
   // push p at the back of its queue and preempt
   for(int i = 0; p && i < p->q_num; i++)
   {
-    if(queue[i].size > 0)
+    if(quesize(i) > 0)
     {
       p->tsr = 0;
       push_proc(p, p->q_num); // q_num for p is set in push_proc

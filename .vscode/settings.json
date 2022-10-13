@@ -4,7 +4,8 @@
     "user.h": "c",
     "unistd.h": "c",
     "functional": "c",
-    "proc.h": "c"
+    "proc.h": "c",
+    "types.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",

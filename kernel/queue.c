@@ -4,7 +4,7 @@
 #include "proc.h"
 #include "defs.h"
 
-extern struct queue queue[5];
+extern struct Q queue[5];
 
 void
 init_queue()
@@ -16,6 +16,16 @@ init_queue()
         for(int j = 0; j < NPROC; j++)
             (queue[i].que)[j] = 0;
     }
+}
+
+int quesize(int qnum)
+{
+    return queue[qnum].size;
+}
+
+struct proc * quefront(int qnum)
+{
+    return queue[qnum].que[0];
 }
 
 // push
