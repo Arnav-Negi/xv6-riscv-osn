@@ -786,31 +786,33 @@ void scheduler(void)
 #endif
 
 #ifdef MLFQ
-    for (p = proc; p < &proc[NPROC]; p++)
-    {
-      if(p->state == RUNNABLE && !p->inqueue)
-      {
-        push_proc(p, p->q_num);
-      }
-    }
+    // for (p = proc; p < &proc[NPROC]; p++)
+    // {
+    //   if(p->state == RUNNABLE && !p->inqueue)
+    //   {
+    //     push_proc(p, p->q_num);
+    //   }
+    // }
 
-    for(int i = 0; i < 5; i++)
-    {
-      if(quesize(i) > 0)
-      {
-        struct proc* prio_proc = pop_proc(i);
+    // for(int i = 0; i < 5; i++)
+    // {
+    //   if(quesize(i) > 0)
+    //   {
+    //     struct proc* prio_proc = pop_proc(i);
         
-        prio_proc->state = RUNNING;
-        prio_proc->tsr = 0;
-        prio_proc->wtime = 0;
+    //     prio_proc->state = RUNNING;
+    //     prio_proc->tsr = 0;
+    //     prio_proc->wtime = 0;
 
-        c->proc = prio_proc;
-        swtch(&c->context, &prio_proc->context);
-        c->proc = 0;
+    //     c->proc = prio_proc;
+    //     swtch(&c->context, &prio_proc->context);
+    //     c->proc = 0;
 
-        break;
-      }
-    }
+    //     break;
+    //   }
+    // }
+
+    
 #endif
 
   }
