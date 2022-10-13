@@ -128,5 +128,7 @@ struct proc {
 #ifdef MLFQ
   int inqueue;                  // Is the process in a queue? then 1 else 0
   int q_num;                    // which queue is the process in?
+  int tsr;                      // "time spent running"
+  int wtime;                    // "time spent waiting in queue"
 #endif
 };

@@ -5,6 +5,10 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "queue.h"
+
+// global queue array
+extern struct queue queue[5];
 
 struct spinlock tickslock;
 uint ticks;
@@ -95,6 +99,14 @@ void usertrap(void)
 #ifdef RR
     yield();
 #endif
+
+#ifdef LBS
+    yield();
+#endif
+
+#ifdef MLFQ
+    yield();
+#endif
   }
 
   usertrapret();
@@ -177,7 +189,11 @@ void kerneltrap()
 #endif
 
 #ifdef LBS
-  yield();
+    yield();
+#endif
+
+#ifdef MLFQ
+    yield();
 #endif
   }
 

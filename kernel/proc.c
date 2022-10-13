@@ -149,7 +149,9 @@ found:
 
 #ifdef MLFQ
   p->inqueue = 0;
-  p->q_num = -1;
+  p->q_num = 0;
+  p->tsr = 0;
+  p->wtime = 0;
 #endif
 
   // Allocate a trapframe page.
@@ -799,10 +801,14 @@ void scheduler(void)
         struct proc* prio_proc = pop_proc(i);
         
         prio_proc->state == RUNNING;
+        prio_proc->tsr = 0;
+        prio_proc->wtime = 0;
 
         c->proc = prio_proc;
         swtch(&c->context, &prio_proc->context);
         c->proc = 0;
+
+        break;
       }
     }
 #endif
@@ -1034,18 +1040,62 @@ void update_ticks()
     case RUNNING:
       p->rtime++;
       p->runticks++;
+#ifdef MLFQ
+      p->tsr++;
+#endif
       break;
     case SLEEPING:
       p->sleepticks++;
       break;
     case RUNNABLE:
-
+#ifdef MLFQ
+      if(p->inqueue)
+        p->wtime++;
+#endif
       break;
     default:
       break;
     }
     release(&p->lock);
   }
+#ifdef MLFQ
+  // ageing
+  for(int i = 1; i < 5; i++)
+  {
+    if(queue[i].size > 0 && queue[i].que[0]->state == RUNNABLE)
+    {
+      if(queue[i].que[0]->wtime == AGETICKS)
+      {
+        struct proc *temp = pop_proc(i);
+        temp->wtime = 0;
+        push_proc(temp, i-1); // q_num for p is set in push_proc
+      }
+    }
+  }
+  p = myproc();
+  // if p has exhausted its time limit, put it at the 
+  // back of the lower queue and preempt
+  if(p && p->tsr >= (1 << p->q_num))
+  {
+    p->tsr = 0;
+    push_proc(p, p->q_num); // q_num for p is set in push_proc
+    return;
+  }
+
+  // if there is a process waiting in the upper queues, then
+  // push p at the back of its queue and preempt
+  for(int i = 0; p && i < p->q_num; i++)
+  {
+    if(queue[i].size > 0)
+    {
+      p->tsr = 0;
+      push_proc(p, p->q_num); // q_num for p is set in push_proc
+      return;
+    }
+  }
+
+#endif
+
 }
 
 // trace the given process.

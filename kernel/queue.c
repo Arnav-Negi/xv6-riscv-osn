@@ -1,4 +1,4 @@
-// #ifdef MLFQ
+#ifdef MLFQ
 
 #include "queue.h"
 #include "proc.h"
@@ -56,4 +56,4 @@ pop_proc(int q_num)
     return p;
 }
 
-// #endif
+#endif
