@@ -155,7 +155,7 @@ found:
   }
 
   if((p->stored_trapframe = (struct trapframe *)kalloc()) == 0){
-    freeproc(p);
+    freeproc(p); 
     release(&p->lock);
     return 0;
   }

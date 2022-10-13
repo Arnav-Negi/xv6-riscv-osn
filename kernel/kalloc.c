@@ -94,9 +94,12 @@ kalloc(void)
   struct run *r;
 
   acquire(&kmem.lock);
+  
   r = kmem.freelist;
-  if (r)
+
+  if (r) {
     kmem.freelist = r->next;
+  }
 
   if (r)
   {
