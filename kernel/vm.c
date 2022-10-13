@@ -306,7 +306,7 @@ int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
   pte_t *pte;
-  uint64 i;
+  uint64 i, pa;
   uint flags;
 
   for(i = 0; i < sz; i += PGSIZE){
@@ -315,13 +315,16 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
 
+    pa = PTE2PA(*pte);
+
     flags = PTE_FLAGS(*pte);
     flags = flags & (~PTE_W);
-    flags = flags & PTE_COW;
+    flags = flags | PTE_COW;
     
-    *pte = (*pte) & flags;
+    if (mappages(new, i, PGSIZE, pa, flags) != 0) goto err;
     inc_links((void *) PTE2PA(*pte));
-    if (mappages(new, i, 1, PTE2PA(*pte), flags) != 0) goto err;
+    uvmunmap(old, i, 1, 0);
+    if (mappages(old, i, PGSIZE, pa, flags) != 0) goto err;
   }
   return 0;
 
@@ -343,27 +346,100 @@ uvmclear(pagetable_t pagetable, uint64 va)
   *pte &= ~PTE_U;
 }
 
+int cowfault(pagetable_t pagetable, uint64 va)
+{
+  if (va >= MAXVA)
+    return -1;
+  pte_t *pte = walk(pagetable, va, 0);
+  if (pte == 0)
+    return -1;
+  if ((*pte & PTE_U) == 0 || (*pte & PTE_V) == 0)
+    return -1;
+  uint64 pa1 = PTE2PA(*pte);
+  uint64 pa2 = (uint64)kalloc();
+  if (pa2 == 0){
+    //panic("cow panic kalloc");
+    return -1;
+  }
+ 
+  memmove((void *)pa2, (void *)pa1, PGSIZE);
+  *pte = PA2PTE(pa2) | PTE_U | PTE_V | PTE_W | PTE_X|PTE_R;
+   kfree((void *)pa1);
+  return 0;
+}
+
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
-  uint64 n, va0, pa0;
+  uint64 n, va, pa;
 
   while(len > 0){
-    va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
+    va = PGROUNDDOWN(dstva);
+    if (va == 0) return -1;
+
+    pa = walkaddr(pagetable, va);
+
+    if(pa == 0)
       return -1;
-    n = PGSIZE - (dstva - va0);
+
+    if (pagetable == 0)
+    {
+      panic("pagetable is null.\n");
+    }
+
+    va = PGROUNDDOWN(va);
+
+    pte_t *pte = walk(pagetable, va, 0); 
+
+    if (!pte) {
+      panic("pte is null.\n");
+    }
+
+    // write page fault.
+    // check for COW bit.
+    if (*pte & PTE_COW)
+    {
+      // allocate pagetable for p.
+      char *mem;
+      char *pa = (char *)PTE2PA(*pte);
+
+      uint64 flags = PTE_FLAGS(*pte);
+      flags = (flags & (~PTE_COW)) | PTE_W;
+
+      // allocate new page
+      mem = kalloc();
+      if (mem == 0)
+      {
+        // no more memory
+        printf("Out of memory, process killed.\n");
+        return -1;
+      }
+      
+      // copy contents of page
+      memmove(mem, pa, PGSIZE);
+
+      // unmap faulted page ref, kfree the pa
+      uvmunmap(pagetable, va, 1, 0);
+      kfree(pa);
+
+      // map new page to pte.
+      if (mappages(pagetable, va, PGSIZE, (uint64)mem, flags) != 0) {
+        printf("Something went wrong, process killed.\n");
+        return -1;
+      }
+    }
+
+    n = PGSIZE - (dstva - va);
     if(n > len)
       n = len;
-    memmove((void *)(pa0 + (dstva - va0)), src, n);
+    memmove((void *)(pa + (dstva - va)), src, n);
 
     len -= n;
     src += n;
-    dstva = va0 + PGSIZE;
+    dstva = va + PGSIZE;
   }
   return 0;
 }

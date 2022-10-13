@@ -330,7 +330,6 @@ int fork(void)
     return -1;
   }
 
-  np->pagetable = p->pagetable;
   np->sz = p->sz;
 
   // copy saved user registers.
@@ -607,7 +606,6 @@ void scheduler(void)
   {
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-
 #ifdef RR
     for (p = proc; p < &proc[NPROC]; p++)
     {

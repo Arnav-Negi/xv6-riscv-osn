@@ -71,37 +71,36 @@ void usertrap(void)
 
     // write page fault.
     // check for COW bit.
-    if (*pte & PTE_COW)
+    if ((*pte & PTE_V) && (*pte & PTE_COW))
     {
       // allocate pagetable for p.
-      uint64 pa, i;
-      uint flags, err = 0;
       char *mem;
+      char *pa = (char *)PTE2PA(*pte);
 
-      for (i = 0; i < p->sz; i += PGSIZE)
+      uint64 flags = PTE_FLAGS(*pte);
+      flags = (flags & (~PTE_COW)) | PTE_W;
+
+      // allocate new page
+      mem = kalloc();
+      if (mem == 0)
       {
-        pa = PTE2PA(*pte);
-        flags = PTE_FLAGS(*pte);
-
-        flags = (flags & (~PTE_COW)) | PTE_W;
-        if ((mem = kalloc()) == 0)
-        {
-          err = 1;
-          break;
-        }
-        memmove(mem, (char *)pa, PGSIZE);
-        uvmunmap(p->pagetable, va, 1, 1);
-        if (mappages(p->pagetable, i, PGSIZE, (uint64)mem, flags) != 0)
-        {
-          kfree(mem);
-          err = 1;
-          break;
-        }
+        // no more memory, kill process
+        p->killed = 1;
+        printf("Out of memory, process killed.\n");
+        return;
       }
+      
+      // copy contents of page
+      memmove(mem, pa, PGSIZE);
 
-      if (err)
-      {
-        uvmunmap(p->pagetable, 0, i / PGSIZE, 1);
+      // unmap faulted page ref, kfree the pa
+      uvmunmap(p->pagetable, va, 1, 0);
+      kfree(pa);
+
+      // map new page to pte.
+      if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags) != 0) {
+        p->killed = 1;
+        printf("Somethign went wrong, process killed.\n");
         return;
       }
     }
