@@ -17,6 +17,8 @@ LBS:
 COW:
 1. wipe out PTE_W on pte of parent for each pte.
 2. change uvmcopy to map the ptes of parent to child.
+3. if page fault, check which: if pte write exception, allocate new paeg for child just like in old uvmcopy
+
 3. if page fault, check which: if pte write exception, allocate new paeg for child just like in old uvmcopy.
 
 MLFQ:
