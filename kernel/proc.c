@@ -155,7 +155,7 @@ found:
   }
 
   if((p->stored_trapframe = (struct trapframe *)kalloc()) == 0){
-    freeproc(p);
+    freeproc(p); 
     release(&p->lock);
     return 0;
   }
@@ -329,6 +329,7 @@ int fork(void)
     release(&np->lock);
     return -1;
   }
+
   np->sz = p->sz;
 
   // copy saved user registers.
@@ -605,7 +606,6 @@ void scheduler(void)
   {
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-
 #ifdef RR
     for (p = proc; p < &proc[NPROC]; p++)
     {

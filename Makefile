@@ -135,6 +135,7 @@ UPROGS=\
 	$U/_strace\
 	$U/_testalarm\
 	$U/_schedulertest\
+	$U/_cowtest\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
