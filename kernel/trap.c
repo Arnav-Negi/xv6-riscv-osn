@@ -99,10 +99,19 @@ void usertrap(void)
       p->CPU_ticks = 0;
       *(p->stored_trapframe) = *(p->trapframe);
       p->trapframe->epc = (uint64)p->alarmhandler;
+      yield();
     }
-    yield();
+    
 #ifdef RR
     yield();
+#endif
+
+#ifdef LBS
+    yield();
+#endif
+
+#ifdef MLFQ
+    handle_specs();
 #endif
   }
 
@@ -188,6 +197,10 @@ void kerneltrap()
 #ifdef LBS
     yield();
 #endif
+
+#ifdef MLFQ
+    yield();
+#endif
   }
 
   // the yield() may have caused some traps to occur,
@@ -199,6 +212,7 @@ void kerneltrap()
 void clockintr()
 {
   acquire(&tickslock);
+  
   ticks++;
   update_ticks();
   wakeup(&ticks);

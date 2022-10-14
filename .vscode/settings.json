@@ -4,7 +4,11 @@
     "user.h": "c",
     "unistd.h": "c",
     "functional": "c",
+    "proc.h": "c",
+    "types.h": "c",
+    "param.h": "c",
     "defs.h": "c",
+    "mlfq.h": "c",
     "spinlock.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
