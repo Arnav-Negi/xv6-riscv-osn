@@ -520,7 +520,6 @@ int waitx(uint64 addr, uint *wtime, uint *rtime)
           pid = np->pid;
           *rtime = np->total_rtime;
           *wtime = np->etime - np->ctime - np->total_rtime;
-          printf("priority: %d\n", np->s_priority);
           if (addr != 0 && copyout(p->pagetable, addr, (char *)&np->xstate,
                                    sizeof(np->xstate)) < 0)
           {
@@ -1034,11 +1033,11 @@ void procdump(void)
   {
     if (p->state == UNUSED)
       continue;
-    if (p->state >= 0 && p->state < NELEM(states) && states[p->state])
+    if (p->state >= 4 && p->state < NELEM(states) && states[p->state])
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+    printf("%d %d %d %s", p->pid, ticks, p->q_num, state);
     printf("\n");
   }
 }
@@ -1148,7 +1147,6 @@ int sigreturn(void)
 // set priority of a process with given pid.
 int set_priority(int new_priority, int pid)
 {
-  printf("In set priority pid : %d, priority : %d\n", pid, new_priority);
   struct proc *p;
   int old_priority;
   for (p = proc; p < &proc[NPROC]; p++)

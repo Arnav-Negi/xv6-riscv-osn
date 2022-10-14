@@ -203,6 +203,7 @@ void kerneltrap()
 void clockintr()
 {
   acquire(&tickslock);
+  
   ticks++;
   update_ticks();
   wakeup(&ticks);
