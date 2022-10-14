@@ -49,61 +49,12 @@ void usertrap(void)
 
   if (r_scause() == 15)
   {
-    if (p->pagetable == 0)
-    {
-      panic("pagetable is null.\n");
-    }
-    uint64 va = r_stval();
-    if (p->sz < va)
-    {
-      printf("error occured outside proc.\n");
+    if (r_stval() >= MAXVA) {
+      printf("Error outside proc.\n");
       p->killed = 1;
-      return;
     }
-
-    va = PGROUNDDOWN(va);
-
-    pte_t *pte = walk(p->pagetable, va, 0); 
-
-    if (!pte) {
-      panic("pte is null.\n");
-    }
-
-    // write page fault.
-    // check for COW bit.
-    if ((*pte & PTE_V) && (*pte & PTE_COW))
-    {
-      // allocate pagetable for p.
-      char *mem;
-      char *pa = (char *)PTE2PA(*pte);
-
-      uint64 flags = PTE_FLAGS(*pte);
-      flags = (flags & (~PTE_COW)) | PTE_W;
-
-      // allocate new page
-      mem = kalloc();
-      if (mem == 0)
-      {
-        // no more memory, kill process
-        p->killed = 1;
-        printf("Out of memory, process killed.\n");
-        return;
-      }
-      
-      // copy contents of page
-      memmove(mem, pa, PGSIZE);
-
-      // unmap faulted page ref, kfree the pa
-      uvmunmap(p->pagetable, va, 1, 0);
-      kfree(pa);
-
-      // map new page to pte.
-      if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags) != 0) {
-        p->killed = 1;
-        printf("Somethign went wrong, process killed.\n");
-        return;
-      }
-    }
+    int retval = COWhandler((void *) r_stval(), p->pagetable);
+    if (retval) p->killed = 1;
   }
   else if (r_scause() == 8)
   {

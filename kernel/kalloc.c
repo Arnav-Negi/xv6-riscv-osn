@@ -35,7 +35,7 @@ void kinit()
   acquire(&kmem.lock);
   for (uint64 i = 0; i < MAX_PTE; i++)
   {
-    kmem.linkcount[i] = 0;
+    kmem.linkcount[i] = 1;
   }
   release(&kmem.lock);
   freerange(end, (void *)PHYSTOP);

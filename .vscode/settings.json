@@ -4,7 +4,8 @@
     "user.h": "c",
     "unistd.h": "c",
     "functional": "c",
-    "defs.h": "c"
+    "defs.h": "c",
+    "spinlock.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",

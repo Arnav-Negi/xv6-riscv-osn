@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -303,6 +305,43 @@ void uvmfree(pagetable_t pagetable, uint64 sz)
   freewalk(pagetable);
 }
 
+// encountered a cow page
+// make a new copy of page, for running proc
+// map pagetable pte to this page, kfree old page.
+int COWhandler(void *va, pagetable_t pt)
+{
+  pte_t *pte = walk(pt, (uint64) va, 0);
+  uint64 pa, flags;
+  char *mem;
+  va = (void *) PGROUNDDOWN((uint64)va);
+
+  if ((uint64) va >= MAXVA) return 1;
+  if (pte == 0) {
+    panic("COW handler: pte is null");
+    return 1;
+  }
+
+  if (((*pte)& PTE_V) == 0 || ((*pte) & PTE_COW )== 0) {
+    panic("COW handler: pte is invalid");
+    return 1;
+  }
+
+  pa = PTE2PA(*pte);
+  flags = PTE_FLAGS(*pte);
+
+  flags = (flags &(~PTE_COW)) | PTE_W;
+  if ((mem = kalloc()) == 0) {
+    printf("out of memory.\n");
+    return 1;
+  }
+
+  memmove(mem, (void *)pa, PGSIZE);
+  kfree((void *) pa);
+  *pte = PA2PTE(mem) | flags;
+
+  return 0;
+}
+
 // Given a parent process's page table, copy
 // its memory into a child's page table.
 // Copies both the page table and the
@@ -329,12 +368,12 @@ int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     {
       flags = flags & (~PTE_W);
       flags = flags | PTE_COW;
+      *pte = PA2PTE(pa) | flags;
     }
 
     if (mappages(new, i, PGSIZE, pa, flags) != 0)
       goto err;
     inc_links((void *)PTE2PA(*pte));
-    *pte = PA2PTE(pa) | flags;
   }
   return 0;
 
@@ -354,6 +393,18 @@ void uvmclear(pagetable_t pagetable, uint64 va)
     panic("uvmclear");
   *pte &= ~PTE_U;
 }
+
+// int COWhandler(void * va, pagetable_t ptable)
+// {
+//   struct proc *p = myproc();
+//   if ((uint64)va >= MAXVA) return -2;
+//   if ((uint64)va>=PGROUNDDOWN(p->trapframe->sp) - PGSIZE &&(uint64)va<=PGROUNDDOWN(p->trapframe->sp))
+//   return -2;
+//   pte_t* pte;
+//   uint64 pa, flags;
+//   va = (void *)PGROUNDDOWN((uint64)va);
+//   pte = walk(ptable, )
+// }
 
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
@@ -378,10 +429,8 @@ int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
       panic("pagetable is null.\n");
     }
 
-    va = PGROUNDDOWN(va);
-
     pte_t *pte = walk(pagetable, va, 0);
-
+    
     if (!pte)
     {
       panic("pte is null.\n");
@@ -391,35 +440,9 @@ int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
     // check for COW bit.
     if (*pte & PTE_COW)
     {
-      // allocate pagetable for p.
-      char *mem;
-      char *pa = (char *)PTE2PA(*pte);
-
-      uint64 flags = PTE_FLAGS(*pte);
-      flags = (flags & (~PTE_COW)) | PTE_W;
-
-      // allocate new page
-      mem = kalloc();
-      if (mem == 0)
-      {
-        // no more memory
-        printf("Out of memory, process killed.\n");
-        return -1;
-      }
-
-      // copy contents of page
-      memmove(mem, pa, PGSIZE);
-
-      // unmap faulted page ref, kfree the pa
-      uvmunmap(pagetable, va, 1, 0);
-      kfree(pa);
-
-      // map new page to pte.
-      if (mappages(pagetable, va, PGSIZE, (uint64)mem, flags) != 0)
-      {
-        printf("Something went wrong, process killed.\n");
-        return -1;
-      }
+      // call handler
+      COWhandler((void *) va, pagetable);
+      pa = walkaddr(pagetable, va);
     }
 
     n = PGSIZE - (dstva - va);
