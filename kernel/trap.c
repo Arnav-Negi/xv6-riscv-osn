@@ -47,7 +47,16 @@ void usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
 
-  if (r_scause() == 8)
+  if (r_scause() == 15)
+  {
+    if (r_stval() >= MAXVA) {
+      printf("Error outside proc.\n");
+      p->killed = 1;
+    }
+    int retval = COWhandler((void *) r_stval(), p->pagetable);
+    if (retval) p->killed = 1;
+  }
+  else if (r_scause() == 8)
   {
     // system call
 
@@ -81,19 +90,28 @@ void usertrap(void)
   // give up the CPU if this is a timer interrupt.
   if (which_dev == 2)
   {
-    struct proc * p = myproc();
+    struct proc *p = myproc();
     p->CPU_ticks++;
-    
+
     if (p->CPU_ticks >= p->interval && p->interval != 0 && !p->inhandler)
     {
       p->inhandler = 1;
       p->CPU_ticks = 0;
       *(p->stored_trapframe) = *(p->trapframe);
       p->trapframe->epc = (uint64)p->alarmhandler;
+      yield();
     }
-    yield();
+    
 #ifdef RR
     yield();
+#endif
+
+#ifdef LBS
+    yield();
+#endif
+
+#ifdef MLFQ
+    handle_specs();
 #endif
   }
 
@@ -177,7 +195,11 @@ void kerneltrap()
 #endif
 
 #ifdef LBS
-  yield();
+    yield();
+#endif
+
+#ifdef MLFQ
+    yield();
 #endif
   }
 
@@ -190,6 +212,7 @@ void kerneltrap()
 void clockintr()
 {
   acquire(&tickslock);
+  
   ticks++;
   update_ticks();
   wakeup(&ticks);

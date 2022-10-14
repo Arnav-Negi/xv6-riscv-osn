@@ -40,5 +40,9 @@ main()
     trapinithart();   // install kernel trap vector
     plicinithart();   // ask PLIC for device interrupts
   }
+#ifdef MLFQ
+  init_queue();
+#endif
+
   scheduler();        
 }

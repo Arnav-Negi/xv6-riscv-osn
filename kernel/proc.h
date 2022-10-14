@@ -26,8 +26,6 @@ struct cpu {
   int intena;                 // Were interrupts enabled before push_off()?
 };
 
-extern struct cpu cpus[NCPU];
-
 // per-process data for the trap handling code in trampoline.S.
 // sits in a page by itself just under the trampoline page in the
 // user page table. not specially mapped in the kernel page table.
@@ -115,7 +113,7 @@ struct proc {
   int trace_mask;
 
   uint64 tickets;               // tickets same as time_slice
-  uint rtime;                   // How long the process ran for
+  uint total_rtime;
   uint ctime;                   // When was the process created 
   uint etime;                   // When did the process exited
 
@@ -123,4 +121,13 @@ struct proc {
   uint64 s_priority, niceness;
   uint64 sleepticks, runticks;
   uint64 num_scheduled;
+
+  // MLFQ
+  int inqueue;                  // Is the process in a queue? then 1 else 0
+  int q_num;                    // which queue is the process in?
+  int rtime;                      // "time spent running"
+  int wtime;                    // "time spent waiting in queue"
 };
+
+extern struct cpu cpus[NCPU];
+extern struct proc proc[NPROC];
