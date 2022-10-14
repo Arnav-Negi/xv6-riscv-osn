@@ -338,6 +338,7 @@ int fork(void)
     release(&np->lock);
     return -1;
   }
+
   np->sz = p->sz;
 
   // copy saved user registers.
@@ -614,7 +615,6 @@ void scheduler(void)
   {
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-
 #ifdef RR
     for (p = proc; p < &proc[NPROC]; p++)
     {

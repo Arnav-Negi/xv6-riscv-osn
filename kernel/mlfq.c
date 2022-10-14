@@ -9,8 +9,6 @@
 
 struct Q network[MAX_Q];
 
-// extern struct proc proc[NPROC];
-
 void init_queue()
 {
     for (int i = 0; i < MAX_Q; i++)
