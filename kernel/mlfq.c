@@ -139,5 +139,6 @@ struct proc *MLFQ_scheduler(void)
 
     if (best == -1)
         return (struct proc *)0;
+    front_proc(best)->num_scheduled++;
     return front_proc(best);
 }

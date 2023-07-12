@@ -49,12 +49,17 @@ void usertrap(void)
 
   if (r_scause() == 15)
   {
-    if (r_stval() >= MAXVA) {
+    if (r_stval() >= MAXVA)
+    {
       printf("Error outside proc.\n");
       p->killed = 1;
     }
-    int retval = COWhandler((void *) r_stval(), p->pagetable);
-    if (retval) p->killed = 1;
+    else
+    {
+      int retval = COWhandler((void *)r_stval(), p->pagetable);
+      if (retval)
+        p->killed = 1;
+    }
   }
   else if (r_scause() == 8)
   {
@@ -101,7 +106,7 @@ void usertrap(void)
       p->trapframe->epc = (uint64)p->alarmhandler;
       yield();
     }
-    
+
 #ifdef RR
     yield();
 #endif
@@ -212,7 +217,7 @@ void kerneltrap()
 void clockintr()
 {
   acquire(&tickslock);
-  
+
   ticks++;
   update_ticks();
   wakeup(&ticks);

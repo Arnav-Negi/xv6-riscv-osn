@@ -317,12 +317,12 @@ int COWhandler(void *va, pagetable_t pt)
 
   if ((uint64) va >= MAXVA) return 1;
   if (pte == 0) {
-    panic("COW handler: pte is null");
+    printf("COW handler: pte is null");
     return 1;
   }
 
   if (((*pte)& PTE_V) == 0 || ((*pte) & PTE_COW )== 0) {
-    panic("COW handler: pte is invalid");
+    printf("COW handler: pte is invalid");
     return 1;
   }
 
