@@ -11,24 +11,28 @@
 #define IO 3
 #endif
 
-int main()
-{
-  int n, pid;
-  for (n = 0; n < NFORK; n++)
-  {
-    pid = fork();
-    if (pid < 0)
-      break;
-    if (pid == 0)
-    {
-#ifdef FCFS
-      //   if (n < IO) {
-      // sleep(1000); // IO bound processes
-      //   } else {
-      for (volatile int j = 0; j < 1000000000; j++)
-      {
-      }
-#endif
+
+#define NFORK 10
+#define IO 5
+
+int main() {
+  int n, pid, temp = 0;
+  int wtime, rtime;
+  int twtime=0, trtime=0;
+  for (n=0; n < NFORK;n++) {
+      pid = fork();
+      if (pid < 0)
+          break;
+      if (pid == 0) {
+          if (n < IO) {
+            sleep(50); // IO bound processes
+          } else {
+            for (uint64 i = 0; i < (uint64)1000000000; i++) {temp++;}; // CPU bound process
+          }
+
+          printf("Process %d finished", n);
+          exit(0);
+      } else {
 #ifdef PBS
       for (volatile int i = 0; i < 100; i++)
       {
