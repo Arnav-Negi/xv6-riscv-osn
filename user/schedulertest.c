@@ -12,97 +12,81 @@
 #endif
 
 
-#define NFORK 10
-#define IO 5
-
 int main() {
-  int n, pid, temp = 0;
-  int wtime, rtime;
-  int twtime=0, trtime=0;
-  for (n=0; n < NFORK;n++) {
-      pid = fork();
-      if (pid < 0)
-          break;
-      if (pid == 0) {
-          if (n < IO) {
-            sleep(50); // IO bound processes
-          } else {
-            for (uint64 i = 0; i < (uint64)1000000000; i++) {temp++;}; // CPU bound process
-          }
+    int n, pid, temp = 0;
+    for (n = 0; n < NFORK; n++) {
+        pid = fork();
+        if (pid < 0)
+            break;
+        if (pid == 0) {
+            if (n < IO) {
+                sleep(50); // IO bound processes
+            } else {
+                for (uint64 i = 0; i < (uint64) 1000000000; i++) { temp++; }; // CPU bound process
+            }
 
-          printf("Process %d finished", n);
-          exit(0);
-      } else {
+            printf("Process %d finished", n);
+            exit(0);
+        } else {
 #ifdef PBS
-      for (volatile int i = 0; i < 100; i++)
-      {
-        for (volatile int j = 0; j < 100000000; j++)
-        {
-        }
-        sleep(100);
-      } // MIXED bound process
+            for (volatile int i = 0; i < 100; i++)
+            {
+              for (volatile int j = 0; j < 100000000; j++)
+              {
+              }
+              sleep(100);
+            } // MIXED bound process
 #endif
 #ifdef LBS
-      if (n == 0)
-      {
-        settickets(100);
-        printf("pid %d has 100 tickets\n", getpid());
-      }
-      else
-      {
-        settickets(1);
-        printf("pid %d has 1 tickets\n", getpid());
-      }
-      for (volatile int i = 0; i < 100; i++)
-      {
-        for (volatile int j = 0; j < 100000000; j++)
-        {
-        }
-        sleep(1);
-      }
+            if (n == 0)
+            {
+              settickets(100);
+              printf("pid %d has 100 tickets\n", getpid());
+            }
+            else
+            {
+              settickets(1);
+              printf("pid %d has 1 tickets\n", getpid());
+            }
+            for (volatile int i = 0; i < 100; i++)
+            {
+              for (volatile int j = 0; j < 100000000; j++)
+              {
+              }
+              sleep(1);
+            }
 #endif
 #ifdef MLFQ
-      if (n < IO)
-      {
-        // CPU
-        for (volatile int i = 0; i < 100; i++)
-        {
-          for (volatile int j = 0; j < 100000000; j++)
-          {
-          }
-          sleep(20);
-        }
-      }
-      else
-      {
-        // IO
-        for (volatile int i = 0; i < 1000; i++)
-        {
-          for (volatile int j = 0; j < 5000000; j++)
-          {
-          }
-          sleep(5);
-        }
-      }
+            if (n < IO)
+            {
+              // CPU
+              for (volatile int i = 0; i < 100; i++)
+              {
+                for (volatile int j = 0; j < 100000000; j++)
+                {
+                }
+                sleep(20);
+              }
+            }
+            else
+            {
+              // IO
+              for (volatile int i = 0; i < 1000; i++)
+              {
+                for (volatile int j = 0; j < 5000000; j++)
+                {
+                }
+                sleep(5);
+              }
+            }
 #endif
-      printf("Process %d finished\n", getpid());
-      exit(0);
+            printf("Process %d finished\n", getpid());
+            exit(0);
+        }
     }
-    else
-    {
-#ifdef PBS
-      if (n % 2 == 1)
-      {
-        set_priority(80, pid); // Will only matter for PBS, set lower priority for IO bound processes
-      }
-#endif
+    for (; n > 0; n--) {
+        if (wait(0) >= 0) {
+        }
     }
-  }
-  for (; n > 0; n--)
-  {
-    if (wait(0) >= 0)
-    {
-    }
-  }
-  exit(0);
+    exit(0);
 }
